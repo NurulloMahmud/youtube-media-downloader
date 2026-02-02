@@ -72,23 +72,23 @@ A simple web application to download YouTube videos and audio using FastAPI and 
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Web interface |
-| POST | `/api/download` | Start a download job |
-| GET | `/api/status/{job_id}` | Check job status |
-| DELETE | `/api/cleanup/{job_id}` | Delete job files |
+| GET | `/yt` | Web interface |
+| POST | `/yt/api/download` | Start a download job |
+| GET | `/yt/api/status/{job_id}` | Check job status |
+| DELETE | `/yt/api/cleanup/{job_id}` | Delete job files |
 
 ### Example API Usage
 
 ```bash
 # Start download
-curl -X POST http://localhost:8000/api/download \
+curl -X POST http://localhost:8000/yt/api/download \
   -H "Content-Type: application/json" \
   -d '{"url": "https://youtu.be/dQw4w9WgXcQ"}'
 
 # Response: {"job_id": "abc123", "status": "pending", "message": "Download started"}
 
 # Check status
-curl http://localhost:8000/api/status/abc123
+curl http://localhost:8000/yt/api/status/abc123
 
 # Response: {"job_id": "abc123", "status": "completed", "video_url": "/downloads/...", ...}
 ```
