@@ -160,8 +160,8 @@ async def start_download(request: DownloadRequest, background_tasks: BackgroundT
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
     
-    if not any(domain in url for domain in ['youtube.com', 'youtu.be']):
-        raise HTTPException(status_code=400, detail="Only YouTube URLs are supported")
+    # if not any(domain in url for domain in ['youtube.com', 'youtu.be']):
+    #     raise HTTPException(status_code=400, detail="Only YouTube URLs are supported")
     
     # Create job
     job_id = str(uuid.uuid4())[:8]
