@@ -1,4 +1,5 @@
 import re
+import shutil
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -34,11 +35,22 @@ def _base_opts(platform: str) -> dict:
     opts: dict = {
         'quiet': True,
         'no_warnings': True,
-        'ffmpeg_location': '/opt/homebrew/bin/ffmpeg',
     }
-    # YouTube needs browser cookies to pass bot-detection
+    # Find ffmpeg wherever it lives (macOS Homebrew, Linux /usr/bin, etc.)
+    ffmpeg = shutil.which('ffmpeg')
+    if ffmpeg:
+        opts['ffmpeg_location'] = ffmpeg
+    # Pass Chrome cookies to YouTube to bypass bot-detection — only when Chrome exists
     if platform == 'youtube':
-        opts['cookiesfrombrowser'] = ('chrome',)
+        chrome = (
+            shutil.which('google-chrome') or
+            shutil.which('google-chrome-stable') or
+            shutil.which('chromium') or
+            shutil.which('chromium-browser') or
+            shutil.which('chrome')
+        )
+        if chrome:
+            opts['cookiesfrombrowser'] = ('chrome',)
     return opts
 
 
