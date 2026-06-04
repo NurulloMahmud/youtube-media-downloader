@@ -21,3 +21,8 @@ BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 MAX_WORKERS = 3
+
+# Optional: path to a Netscape-format cookies file for Instagram (and other
+# platforms that require auth from server IPs).
+# Place the file at this path on the server to enable authenticated downloads.
+INSTAGRAM_COOKIES_FILE = BASE_DIR.parent / "instagram_cookies.txt"

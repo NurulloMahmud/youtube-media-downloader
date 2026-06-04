@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 import yt_dlp
 
-from ..config import DOWNLOADS_DIR, MAX_WORKERS
+from ..config import DOWNLOADS_DIR, INSTAGRAM_COOKIES_FILE, MAX_WORKERS
 
 executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 
@@ -52,6 +52,9 @@ def _base_opts(platform: str) -> dict:
         )
         if chrome:
             opts['cookiesfrombrowser'] = ('chrome',)
+    # Use cookies file for Instagram (required on server/datacenter IPs)
+    if platform == 'instagram' and INSTAGRAM_COOKIES_FILE.exists():
+        opts['cookiefile'] = str(INSTAGRAM_COOKIES_FILE)
     return opts
 
 
