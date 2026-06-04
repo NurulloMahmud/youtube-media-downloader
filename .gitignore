@@ -1,7 +1,9 @@
-downloads/
-venv
-env
+backend/downloads/
+venv/
+env/
 .dist/
 __pycache__/
+**/__pycache__/
+*.pyc
 .env
 deploy/

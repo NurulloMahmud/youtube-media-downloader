@@ -1,0 +1,481 @@
+/* ── Reset & base ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0b0b11;
+  --surface:   #13131f;
+  --surface2:  #1a1a2e;
+  --border:    #23233a;
+  --text:      #f1f1f7;
+  --muted:     #7b7b99;
+  --accent:    #7c3aed;
+  --accent-h:  #6d28d9;
+  --yt-red:    #ff0000;
+  --ig-start:  #f09433;
+  --ig-end:    #bc1888;
+  --green:     #22c55e;
+  --orange:    #f59e0b;
+  --red:       #ef4444;
+  --blue:      #3b82f6;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────── */
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+.header { text-align: center; }
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.brand-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-tagline {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* ── Platform badges ───────────────────────────────────────────────── */
+.platforms {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.platform-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.platform-badge svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.platform-badge.yt {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.25);
+  color: #ff4444;
+}
+
+.platform-badge.ig {
+  background: rgba(188, 24, 136, 0.1);
+  border-color: rgba(188, 24, 136, 0.25);
+  color: #e1306c;
+}
+
+/* ── Steps ─────────────────────────────────────────────────────────── */
+.steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 20px;
+}
+
+.step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.step p {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.step-connector {
+  flex-shrink: 0;
+  width: 32px;
+  height: 2px;
+  background: var(--border);
+  margin-top: 18px;
+  align-self: flex-start;
+}
+
+/* ── Main card ─────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* URL indicator */
+.url-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.825rem;
+  color: var(--muted);
+}
+
+.url-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.url-indicator-dot.neutral  { background: var(--muted); }
+.url-indicator-dot.youtube  { background: var(--yt-red); }
+.url-indicator-dot.instagram { background: var(--ig-end); }
+.url-indicator-dot.invalid  { background: var(--red); }
+
+/* Input row */
+.input-row {
+  display: flex;
+  gap: 10px;
+}
+
+#urlInput {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 0;
+}
+
+#urlInput::placeholder { color: var(--muted); }
+#urlInput:focus { border-color: var(--accent); }
+
+#downloadBtn {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+#downloadBtn:hover  { background: var(--accent-h); }
+#downloadBtn:active { transform: scale(0.97); }
+#downloadBtn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Progress area */
+.progress-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.status-pill[data-status="completed"] { color: var(--green); }
+.status-pill[data-status="error"]     { color: var(--red); }
+
+.status-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.status-pill[data-status="completed"] .status-pulse,
+.status-pill[data-status="error"]     .status-pulse { animation: none; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.video-title-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 360px;
+}
+
+.progress-track {
+  background: var(--surface2);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  border-radius: 999px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* Error area */
+.error-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--red);
+  font-size: 0.875rem;
+}
+
+.error-area svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Download grid ──────────────────────────────────────────────────── */
+.downloads-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.dl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, transform 0.15s, background 0.2s;
+}
+
+.dl-card:hover {
+  transform: translateY(-2px);
+}
+
+.video-card:hover { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
+.audio-card:hover { border-color: #22c55e; background: rgba(34,197,94,0.06); }
+
+.dl-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.video-card .dl-card-icon { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.audio-card .dl-card-icon { background: rgba(34,197,94,0.15);  color: #22c55e; }
+
+.dl-card-icon svg { width: 22px; height: 22px; }
+
+.dl-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dl-card-type {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.dl-card-format {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.dl-card-action {
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.dl-card:hover .dl-card-action { color: var(--text); }
+.dl-card-action svg { width: 20px; height: 20px; }
+
+/* ── Telegram CTA ───────────────────────────────────────────────────── */
+.telegram-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(41, 182, 246, 0.07);
+  border: 1px solid rgba(41, 182, 246, 0.2);
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-size: 0.85rem;
+  color: #93c5fd;
+  text-align: center;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  cursor: pointer;
+}
+
+.telegram-cta:hover {
+  background: rgba(41, 182, 246, 0.13);
+  border-color: rgba(41, 182, 246, 0.4);
+  transform: translateY(-1px);
+  color: #bae6fd;
+}
+
+.telegram-cta svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #29b6f6;
+}
+
+.telegram-cta .cta-arrow {
+  width: 16px;
+  height: 16px;
+  color: #64b5f6;
+  margin-left: auto;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.telegram-cta:hover .cta-arrow {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── Utility ────────────────────────────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .steps { flex-direction: column; gap: 16px; }
+  .step-connector { width: 2px; height: 20px; align-self: center; margin-top: 0; }
+  .input-row { flex-direction: column; }
+  #downloadBtn { width: 100%; justify-content: center; }
+  .downloads-grid { grid-template-columns: 1fr; }
+  .step { flex-direction: row; text-align: left; }
+}
