@@ -1,6 +1,11 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load .env from the project root (parent of backend/)
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 BASE_DIR = Path(__file__).parent
 DOWNLOADS_DIR = BASE_DIR / "downloads"
 DOWNLOADS_DIR.mkdir(exist_ok=True)
