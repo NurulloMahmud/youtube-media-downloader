@@ -1,5 +1,6 @@
 import re
 import shutil
+import subprocess
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -120,26 +121,27 @@ def _run_download(url: str, job_id: str) -> None:
         jobs[job_id]['video_path'] = str(video_path)
         jobs[job_id]['video_url'] = f"/downloads/{video_path.name}"
 
-        # ── Audio ──────────────────────────────────────────────────────────
+        # ── Audio — extract from the already-downloaded video via ffmpeg ──────
+        # Avoids a second network request (prevents Instagram rate-limit hits).
         jobs[job_id]['status'] = 'downloading_audio'
         jobs[job_id]['progress'] = '0%'
 
         audio_stem = f"{job_id}_{safe_title}_audio"
         audio_final = DOWNLOADS_DIR / f"{audio_stem}.mp3"
 
-        audio_opts = {
-            **_base_opts(platform),
-            'format': 'bestaudio/best',
-            'outtmpl': str(DOWNLOADS_DIR / f"{audio_stem}.%(ext)s"),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-            'progress_hooks': [make_progress_hook('audio')],
-        }
-        with yt_dlp.YoutubeDL(audio_opts) as ydl:
-            ydl.download([url])
+        ffmpeg_bin = shutil.which('ffmpeg') or 'ffmpeg'
+        proc = subprocess.run(
+            [ffmpeg_bin, '-i', str(video_path), '-vn',
+             '-codec:a', 'libmp3lame', '-b:a', '192k', '-y', str(audio_final)],
+            capture_output=True,
+            timeout=300,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"ffmpeg audio extraction failed: {proc.stderr.decode(errors='replace')[-400:]}"
+            )
+
+        jobs[job_id]['progress'] = '100%'
 
         if not audio_final.exists():
             raise FileNotFoundError("Audio file not found after extraction")
