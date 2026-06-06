@@ -185,15 +185,16 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
     return jobs.get(job_id)
 
 
-def cleanup_job(job_id: str) -> bool:
+def cleanup_job(job_id: str, delete_files: bool = True) -> bool:
     job = jobs.pop(job_id, None)
     if not job:
         return False
-    for key in ('video_path', 'audio_path'):
-        path_str = job.get(key)
-        if path_str:
-            try:
-                Path(path_str).unlink(missing_ok=True)
-            except Exception:
-                pass
+    if delete_files:
+        for key in ('video_path', 'audio_path'):
+            path_str = job.get(key)
+            if path_str:
+                try:
+                    Path(path_str).unlink(missing_ok=True)
+                except Exception:
+                    pass
     return True

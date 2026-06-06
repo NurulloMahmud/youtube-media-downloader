@@ -138,7 +138,7 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     await _safe_edit(status_msg, "📤 Sending files…")
 
-    await _send_file(
+    video_uploaded = await _send_file(
         context,
         chat_id,
         file_path=video_path,
@@ -148,7 +148,7 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         extra_kwargs={"supports_streaming": True},
     )
 
-    await _send_file(
+    audio_uploaded = await _send_file(
         context,
         chat_id,
         file_path=audio_path,
@@ -159,7 +159,11 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     )
 
     await _safe_edit(status_msg, "✅ Done! Files sent above.")
-    cleanup_job(job_id)
+    # Only delete files immediately when both were uploaded directly to Telegram.
+    # If either went out as a download link, keep the files on disk so the
+    # user can actually click the link — the 1-hour periodic cleanup will
+    # remove them later.
+    cleanup_job(job_id, delete_files=(video_uploaded and audio_uploaded))
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -172,13 +176,14 @@ async def _send_file(
     send_fn: str,
     caption: str,
     extra_kwargs: dict,
-) -> None:
+) -> bool:
+    """Returns True if the file was uploaded directly to Telegram, False otherwise."""
     if not file_path:
-        return
+        return True  # nothing to send, treat as "done"
 
     path = Path(file_path)
     if not path.exists():
-        return
+        return True
 
     size = path.stat().st_size
 
@@ -191,11 +196,11 @@ async def _send_file(
                     write_timeout=300,
                     read_timeout=60,
                 )
-            return
+            return True
         except Exception as exc:
             logger.warning("Direct upload failed (%s), falling back to link: %s", send_fn, exc)
 
-    # Fallback: send a download link
+    # Fallback: send a download link — file must stay on disk until user downloads it
     size_mb = size / (1024 * 1024)
     kind    = "Video" if send_fn == "send_video" else "Audio"
     if fallback_url:
@@ -209,6 +214,7 @@ async def _send_file(
             chat_id,
             f"⚠️ {kind} file is {size_mb:.1f} MB and could not be uploaded.",
         )
+    return False
 
 
 async def _safe_edit(msg, text: str, **kwargs) -> None:
