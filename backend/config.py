@@ -26,3 +26,4 @@ MAX_WORKERS = 3
 # platforms that require auth from server IPs).
 # Place the file at this path on the server to enable authenticated downloads.
 INSTAGRAM_COOKIES_FILE = BASE_DIR.parent / "instagram_cookies.txt"
+YOUTUBE_COOKIES_FILE = BASE_DIR.parent / "youtube_cookies.txt"

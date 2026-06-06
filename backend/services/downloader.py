@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 import yt_dlp
 
-from ..config import DOWNLOADS_DIR, INSTAGRAM_COOKIES_FILE, MAX_WORKERS
+from ..config import DOWNLOADS_DIR, INSTAGRAM_COOKIES_FILE, YOUTUBE_COOKIES_FILE, MAX_WORKERS
 
 executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 
@@ -41,18 +41,22 @@ def _base_opts(platform: str) -> dict:
     ffmpeg = shutil.which('ffmpeg')
     if ffmpeg:
         opts['ffmpeg_location'] = ffmpeg
-    # Pass Chrome cookies to YouTube to bypass bot-detection — only when Chrome exists
     if platform == 'youtube':
-        chrome = (
-            shutil.which('google-chrome') or
-            shutil.which('google-chrome-stable') or
-            shutil.which('chromium') or
-            shutil.which('chromium-browser') or
-            shutil.which('chrome')
-        )
-        if chrome:
-            opts['cookiesfrombrowser'] = ('chrome',)
-    # Use cookies file for Instagram (required on server/datacenter IPs)
+        if YOUTUBE_COOKIES_FILE.exists():
+            opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
+        else:
+            # Fallback: extract from Chrome when running locally
+            chrome = (
+                shutil.which('google-chrome') or
+                shutil.which('google-chrome-stable') or
+                shutil.which('chromium') or
+                shutil.which('chromium-browser') or
+                shutil.which('chrome')
+            )
+            if chrome:
+                opts['cookiesfrombrowser'] = ('chrome',)
+        # Allow yt-dlp to fetch the JS challenge solver from GitHub (needs deno)
+        opts['remote_components'] = 'ejs:github'
     if platform == 'instagram' and INSTAGRAM_COOKIES_FILE.exists():
         opts['cookiefile'] = str(INSTAGRAM_COOKIES_FILE)
     return opts
