@@ -18,7 +18,7 @@ jobs: Dict[str, Dict[str, Any]] = {}
 
 
 def sanitize_filename(name: str) -> str:
-    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', name)
+    name = re.sub(r'[^\w\s-]', '', name)   # keep word chars, spaces, hyphens only
     name = re.sub(r'\s+', '_', name.strip())
     return name[:100] or 'video'
 
