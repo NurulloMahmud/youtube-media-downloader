@@ -201,9 +201,8 @@ async def _send_file(
     if fallback_url:
         await context.bot.send_message(
             chat_id,
-            f"📥 *{kind}* ({size_mb:.1f} MB — too large for direct upload)\n"
+            f"📥 {kind} ({size_mb:.1f} MB — too large for direct upload)\n"
             f"Download here: {fallback_url}",
-            parse_mode="Markdown",
         )
     else:
         await context.bot.send_message(
