@@ -188,9 +188,11 @@ async def _send_file(
                 await getattr(context.bot, send_fn)(
                     chat_id, **{send_fn.replace("send_", ""): fh},
                     caption=caption, **extra_kwargs,
+                    write_timeout=300,
+                    read_timeout=60,
                 )
             return
-        except TelegramError as exc:
+        except Exception as exc:
             logger.warning("Direct upload failed (%s), falling back to link: %s", send_fn, exc)
 
     # Fallback: send a download link
@@ -233,7 +235,15 @@ def main() -> None:
         )
         sys.exit(1)
 
-    app = Application.builder().token(token).build()
+    app = (
+        Application.builder()
+        .token(token)
+        .read_timeout(60)
+        .write_timeout(300)   # 5 min for large file uploads
+        .connect_timeout(30)
+        .pool_timeout(60)
+        .build()
+    )
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help",  cmd_help))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_url))
