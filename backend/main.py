@@ -1,7 +1,9 @@
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api.routes import router
@@ -35,6 +37,14 @@ app = FastAPI(title="Video Downloader API", lifespan=lifespan)
 
 app.include_router(router)
 app.include_router(webhook_router)
+
+@app.get("/privacy-policy")
+async def privacy_policy():
+    return FileResponse(Path(FRONTEND_DIR) / "privacy-policy.html")
+
+@app.get("/data-deletion")
+async def data_deletion():
+    return FileResponse(Path(FRONTEND_DIR) / "data-deletion.html")
 
 # Serve downloaded files
 app.mount("/downloads", StaticFiles(directory=str(DOWNLOADS_DIR)), name="downloads")
