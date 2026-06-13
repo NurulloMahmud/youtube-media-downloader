@@ -37,6 +37,8 @@ async def verify_webhook(
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
     # Always return 200 immediately — Meta will retry otherwise
     payload = await request.json()
+    logger.info("IG webhook POST received: object=%s entries=%d",
+                payload.get("object"), len(payload.get("entry", [])))
     background_tasks.add_task(_handle_payload, payload)
     return {"status": "ok"}
 
@@ -45,14 +47,26 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
 
 async def _handle_payload(payload: dict) -> None:
     if payload.get("object") != "instagram":
+        logger.warning("Unexpected webhook object: %s", payload.get("object"))
         return
 
     for entry in payload.get("entry", []):
-        for event in entry.get("messaging", []):
+        entry_id = entry.get("id", "?")
+        messaging = entry.get("messaging", [])
+        logger.info("Processing entry id=%s messaging_events=%d", entry_id, len(messaging))
+        for event in messaging:
             sender_id = event.get("sender", {}).get("id", "")
             message   = event.get("message", {})
-            if not sender_id or not message or message.get("is_echo"):
+            if not sender_id or not message:
+                logger.debug("Skipping event — no sender or message: %r", event)
                 continue
+            if message.get("is_echo"):
+                logger.debug("Skipping echo message from %s", sender_id)
+                continue
+            logger.info("Incoming message from igsid=%s text=%r attachments=%d",
+                        sender_id,
+                        (message.get("text") or "")[:60],
+                        len(message.get("attachments", [])))
             await _handle_message(sender_id, message)
 
 
@@ -76,40 +90,55 @@ async def _handle_message(igsid: str, message: dict) -> None:
 
 
 async def _handle_start(igsid: str) -> None:
+    logger.info("_handle_start called for igsid=%s", igsid)
     db = SessionLocal()
     try:
         existing = get_user_by_ig_id(db, igsid)
         if existing:
-            # Already registered — resend token, don't create a new one
-            await send_message(
+            logger.info("User already exists (igsid=%s token=%s), resending token", igsid, existing.token)
+            ok = await send_message(
                 igsid,
                 f"You already have a token: {existing.token}\n\n"
                 f"Open @KontentYuklovchiBot on Telegram, paste your token there "
                 f"to link your account, then forward any Reel to this chat and "
                 f"I'll deliver the video + audio straight to Telegram.",
             )
+            logger.info("Resend-token DM sent=%s for igsid=%s", ok, igsid)
             return
 
         # Check follower status before registering
+        logger.info("Checking follower status for igsid=%s", igsid)
         info = await get_user_info(igsid)
-        if not is_follower(info):
-            await send_message(
+        if "error" in info:
+            logger.error("Cannot check follower status — API error: %s", info["error"])
+            # Don't silently drop the message; inform the user something is wrong
+            await send_message(igsid, "Sorry, something went wrong on our end. Please try again later.")
+            return
+
+        follower = is_follower(info)
+        logger.info("igsid=%s is_follower=%s username=%s", igsid, follower, info.get("username"))
+
+        if not follower:
+            ok = await send_message(
                 igsid,
                 "Please follow our Instagram account first, then send 'start' again "
                 "to get your access token.",
             )
+            logger.info("Not-a-follower DM sent=%s for igsid=%s", ok, igsid)
             return
 
         ig_username = info.get("username") or info.get("name")
         user = create_user(db, igsid, ig_username)
+        logger.info("Created user igsid=%s token=%s username=%s", igsid, user.token, ig_username)
 
-        await send_message(
+        ok = await send_message(
             igsid,
             f"Welcome! Your token is:\n\n{user.token}\n\n"
             f"Open @KontentYuklovchiBot on Telegram and paste this token to link "
             f"your account. After that, forward any Instagram Reel to this chat "
             f"and I'll send the video + audio directly to your Telegram.",
         )
+        logger.info("Welcome DM sent=%s for igsid=%s token=%s", ok, igsid, user.token)
     except Exception:
         logger.exception("Error in _handle_start for %s", igsid)
     finally:
