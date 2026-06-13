@@ -27,3 +27,13 @@ MAX_WORKERS = 3
 # Place the file at this path on the server to enable authenticated downloads.
 INSTAGRAM_COOKIES_FILE = BASE_DIR.parent / "instagram_cookies.txt"
 YOUTUBE_COOKIES_FILE = BASE_DIR.parent / "youtube_cookies.txt"
+
+# PostgreSQL
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://videograb:vg_db_s3cure_2024@localhost/videograb")
+
+# Instagram Messaging API
+IG_APP_ID             = os.getenv("IG_APP_ID", "")
+IG_APP_SECRET         = os.getenv("IG_APP_SECRET", "")
+IG_PAGE_ACCESS_TOKEN  = os.getenv("IG_PAGE_ACCESS_TOKEN", "")
+IG_ACCOUNT_ID         = os.getenv("IG_ACCOUNT_ID", "")
+IG_WEBHOOK_VERIFY_TOKEN = os.getenv("IG_WEBHOOK_VERIFY_TOKEN", "videograb_webhook_2024")

@@ -1,10 +1,9 @@
-"""Telegram bot — users paste a YouTube or Instagram URL and receive
-the downloaded video and extracted audio as files (or download links
-when files exceed Telegram's 50 MB upload limit)."""
+"""Telegram bot — users paste a YouTube/Instagram URL to download, or a
+token (from Instagram DM) to link their Instagram account."""
 
 import asyncio
 import logging
-import os
+import re
 import sys
 from pathlib import Path
 
@@ -12,10 +11,11 @@ from telegram import Update
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-# Allow running directly *or* as part of the package
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.config import BASE_URL, TELEGRAM_BOT_TOKEN
+from backend.database import SessionLocal
+from backend.models import get_user_by_token, link_telegram
 from backend.services.downloader import cleanup_job, get_job, start_download
 
 logging.basicConfig(
@@ -25,7 +25,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 SUPPORTED_DOMAINS = ['youtube.com', 'youtu.be', 'instagram.com']
-MAX_UPLOAD_BYTES  = 50 * 1024 * 1024  # Telegram bot upload limit
+MAX_UPLOAD_BYTES  = 50 * 1024 * 1024
+
+# A token is exactly 12 lowercase hex characters
+_TOKEN_RE = re.compile(r'^[0-9a-f]{12}$')
 
 STATUS_TEXT = {
     'pending':           '⏳ Queued…',
@@ -37,62 +40,111 @@ STATUS_TEXT = {
 }
 
 
-def _is_supported(text: str) -> bool:
+def _is_url(text: str) -> bool:
     return any(d in text for d in SUPPORTED_DOMAINS)
 
 
-# ── Command handlers ─────────────────────────────────────────────────
+def _is_token(text: str) -> bool:
+    return bool(_TOKEN_RE.match(text.strip().lower()))
+
+
+# ── Command handlers ──────────────────────────────────────────────────
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "👋 *Welcome to VideoGrab Bot!*\n\n"
-        "Send me a YouTube or Instagram Reels link and I'll download the "
-        "video and extract the audio for you.\n\n"
-        "*Supported:*\n"
+        "You can use me in two ways:\n\n"
+        "1️⃣ *Download directly* — paste a YouTube or Instagram Reel URL and "
+        "I'll send you the video + audio.\n\n"
+        "2️⃣ *Link your Instagram* — DM 'start' to our Instagram account "
+        "to get a token, then paste that token here to connect your accounts. "
+        "After that, just forward any Reel to Instagram and it arrives here automatically.\n\n"
+        "*Supported platforms:*\n"
         "▶️ YouTube — youtube.com / youtu.be\n"
-        "📸 Instagram Reels — instagram.com/reels/\n\n"
-        "Just paste a URL to get started!",
+        "📸 Instagram Reels — instagram.com/reel/",
         parse_mode="Markdown",
     )
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "*How to use:*\n"
+        "*How to use:*\n\n"
+        "*Direct download:*\n"
         "1. Copy a YouTube or Instagram Reel URL\n"
-        "2. Paste it here and send\n"
-        "3. Wait while I download and process it\n"
-        "4. Receive your video and audio files\n\n"
+        "2. Paste it here\n"
+        "3. Receive video + audio\n\n"
+        "*Instagram forwarding setup:*\n"
+        "1. Follow our Instagram account\n"
+        "2. DM 'start' to get your token\n"
+        "3. Paste the token here to link\n"
+        "4. Forward any Reel to Instagram — it arrives here automatically\n\n"
         "*Notes:*\n"
-        "• Files over 50 MB are sent as download links instead\n"
-        "• Files are deleted from the server after 1 hour\n"
-        "• Use /start to see the welcome message",
+        "• Files over 50 MB are sent as download links\n"
+        "• Files are available for 1 hour\n",
         parse_mode="Markdown",
     )
 
 
-# ── URL handler ──────────────────────────────────────────────────────
+# ── Main message handler ──────────────────────────────────────────────
 
-async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    url = update.message.text.strip()
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    text = update.message.text.strip()
 
-    if not _is_supported(url):
+    if _is_token(text):
+        await _handle_token(update, text.lower())
+    elif _is_url(text):
+        await _handle_download(update, text)
+    else:
         await update.message.reply_text(
-            "❌ *Unsupported URL*\n\n"
-            "Please send a valid YouTube or Instagram link.\n\n"
-            "Examples:\n"
-            "• https://youtube.com/watch?v=...\n"
-            "• https://youtu.be/...\n"
-            "• https://instagram.com/reels/...",
+            "I didn't recognise that.\n\n"
+            "Send a YouTube or Instagram Reel URL to download it, "
+            "or paste the token from your Instagram DM to link your account.\n\n"
+            "Use /help for more info."
+        )
+
+
+# ── Token linking ─────────────────────────────────────────────────────
+
+async def _handle_token(update: Update, token: str) -> None:
+    chat_id = update.effective_chat.id
+    db = SessionLocal()
+    try:
+        user = get_user_by_token(db, token)
+        if not user:
+            await update.message.reply_text(
+                "❌ That token wasn't found. Check you copied it correctly from the Instagram DM.\n\n"
+                "If you haven't started yet, DM 'start' to our Instagram account first."
+            )
+            return
+
+        if user.telegram_chat_id and user.telegram_chat_id == chat_id:
+            await update.message.reply_text(
+                "✅ Your account is already linked! Just forward any Reel to our Instagram "
+                "and the video + audio will arrive here."
+            )
+            return
+
+        link_telegram(db, token, chat_id)
+        await update.message.reply_text(
+            "✅ *Linked!* Your Instagram and Telegram are now connected.\n\n"
+            "Forward any Instagram Reel to our Instagram account and the "
+            "video + audio will be sent here automatically.",
             parse_mode="Markdown",
         )
-        return
+    except Exception:
+        logger.exception("Error handling token %s for chat %s", token, chat_id)
+        await update.message.reply_text("Something went wrong. Please try again.")
+    finally:
+        db.close()
 
+
+# ── URL download ──────────────────────────────────────────────────────
+
+async def _handle_download(update: Update, url: str) -> None:
     status_msg = await update.message.reply_text("⏳ Starting…")
     job_id = start_download(url)
     last_text = ""
 
-    # ── Poll until done ──────────────────────────────────────────────
     while True:
         await asyncio.sleep(2)
         job = get_job(job_id)
@@ -128,18 +180,17 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             cleanup_job(job_id)
             return
 
-    # ── Send files ───────────────────────────────────────────────────
-    chat_id     = update.effective_chat.id
-    video_path  = job.get("video_path")
-    audio_path  = job.get("audio_path")
-    video_url   = job.get("video_url")
-    audio_url   = job.get("audio_url")
-    title       = job.get("title", "video")
+    chat_id    = update.effective_chat.id
+    video_path = job.get("video_path")
+    audio_path = job.get("audio_path")
+    video_url  = job.get("video_url")
+    audio_url  = job.get("audio_url")
+    title      = job.get("title", "video")
 
     await _safe_edit(status_msg, "📤 Sending files…")
 
     video_uploaded = await _send_file(
-        context,
+        update.get_bot() or update.message.get_bot(),
         chat_id,
         file_path=video_path,
         fallback_url=f"{BASE_URL}{video_url}" if video_url else None,
@@ -147,9 +198,8 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         caption=f"🎬 {title}",
         extra_kwargs={"supports_streaming": True},
     )
-
     audio_uploaded = await _send_file(
-        context,
+        update.get_bot() or update.message.get_bot(),
         chat_id,
         file_path=audio_path,
         fallback_url=f"{BASE_URL}{audio_url}" if audio_url else None,
@@ -159,27 +209,15 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     )
 
     await _safe_edit(status_msg, "✅ Done! Files sent above.")
-    # Only delete files immediately when both were uploaded directly to Telegram.
-    # If either went out as a download link, keep the files on disk so the
-    # user can actually click the link — the 1-hour periodic cleanup will
-    # remove them later.
     cleanup_job(job_id, delete_files=(video_uploaded and audio_uploaded))
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
+# ── Shared helpers ────────────────────────────────────────────────────
 
-async def _send_file(
-    context: ContextTypes.DEFAULT_TYPE,
-    chat_id: int,
-    file_path: str | None,
-    fallback_url: str | None,
-    send_fn: str,
-    caption: str,
-    extra_kwargs: dict,
-) -> bool:
-    """Returns True if the file was uploaded directly to Telegram, False otherwise."""
+async def _send_file(bot, chat_id, file_path, fallback_url, send_fn, caption, extra_kwargs) -> bool:
+    """Returns True if uploaded directly, False if fallback link was sent."""
     if not file_path:
-        return True  # nothing to send, treat as "done"
+        return True
 
     path = Path(file_path)
     if not path.exists():
@@ -190,7 +228,7 @@ async def _send_file(
     if size <= MAX_UPLOAD_BYTES:
         try:
             with open(path, "rb") as fh:
-                await getattr(context.bot, send_fn)(
+                await getattr(bot, send_fn)(
                     chat_id, **{send_fn.replace("send_", ""): fh},
                     caption=caption, **extra_kwargs,
                     write_timeout=300,
@@ -198,22 +236,18 @@ async def _send_file(
                 )
             return True
         except Exception as exc:
-            logger.warning("Direct upload failed (%s), falling back to link: %s", send_fn, exc)
+            logger.warning("Direct upload failed (%s): %s", send_fn, exc)
 
-    # Fallback: send a download link — file must stay on disk until user downloads it
     size_mb = size / (1024 * 1024)
     kind    = "Video" if send_fn == "send_video" else "Audio"
     if fallback_url:
-        await context.bot.send_message(
+        await bot.send_message(
             chat_id,
             f"📥 {kind} ({size_mb:.1f} MB — too large for direct upload)\n"
             f"Download here: {fallback_url}",
         )
     else:
-        await context.bot.send_message(
-            chat_id,
-            f"⚠️ {kind} file is {size_mb:.1f} MB and could not be uploaded.",
-        )
+        await bot.send_message(chat_id, f"⚠️ {kind} ({size_mb:.1f} MB) could not be uploaded.")
     return False
 
 
@@ -225,33 +259,28 @@ async def _safe_edit(msg, text: str, **kwargs) -> None:
 
 
 def _escape_md(text: str) -> str:
-    """Minimal Markdown V1 escaping for inline code/bold usage."""
     return text.replace("*", "\\*").replace("`", "\\`").replace("_", "\\_")
 
 
-# ── Entry point ──────────────────────────────────────────────────────
+# ── Entry point ───────────────────────────────────────────────────────
 
 def main() -> None:
-    token = TELEGRAM_BOT_TOKEN
-    if not token:
-        logger.error(
-            "TELEGRAM_BOT_TOKEN is not set. "
-            "Create a .env file or set the environment variable."
-        )
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN is not set.")
         sys.exit(1)
 
     app = (
         Application.builder()
-        .token(token)
+        .token(TELEGRAM_BOT_TOKEN)
         .read_timeout(60)
-        .write_timeout(300)   # 5 min for large file uploads
+        .write_timeout(300)
         .connect_timeout(30)
         .pool_timeout(60)
         .build()
     )
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help",  cmd_help))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_url))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logger.info("VideoGrab Bot started — polling…")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
